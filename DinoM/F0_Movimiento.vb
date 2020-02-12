@@ -919,19 +919,24 @@ Public Class F0_Movimiento
     End Sub
 
     Public Sub InsertarProductosSinLote()
-        '      a.icid ,a.icibid ,a.iccprod ,b.yfcdprod1  as producto,a.iccant ,
-        'a.iclot ,a.icfvenc ,Cast(null as image ) as img,1 as estado,
-        '(Sum(inv.iccven )+a.iccant  ) as stock
-        Dim pos As Integer = -1
-        grdetalle.Row = grdetalle.RowCount - 1
-        _fnObtenerFilaDetalle(pos, grdetalle.GetValue("icid"))
-        'Obtiene el Id Del producto anterior, para verificar si tiene transacciones relacionadas
-        Dim IdProducto = CType(grdetalle.DataSource, DataTable).Rows(pos).Item("iccprod")
-        Dim Lote = CType(grdetalle.DataSource, DataTable).Rows(pos).Item("iclot")
-        Dim FechaVen = CType(grdetalle.DataSource, DataTable).Rows(pos).Item("icfvenc")
-        Dim existe As Boolean = _fnExisteProducto(grproducto.GetValue("yfnumi"))
-        Dim existeTransaccion As Boolean = L_fnVerificarExistenciaVenta(IdProducto, Lote, FechaVen)
-        If existeTransaccion Then
+        Try
+            Dim existeTransaccion = False
+            If (tbCodigo.Text = String.Empty) Then
+                grdetalle.Row = grdetalle.RowCount - 1
+            End If
+            Dim pos As Integer = -1
+            _fnObtenerFilaDetalle(pos, grdetalle.GetValue("icid"))
+            'Obtiene el Id Del producto anterior, para verificar si tiene transacciones relacionadas
+            If (Not tbCodigo.Text = String.Empty) Then
+                Dim IdProducto = CType(grdetalle.DataSource, DataTable).Rows(pos).Item("iccprod")
+                Dim Lote = CType(grdetalle.DataSource, DataTable).Rows(pos).Item("iclot")
+                Dim FechaVen = CType(grdetalle.DataSource, DataTable).Rows(pos).Item("icfvenc")
+                existeTransaccion = L_fnVerificarExistenciaVenta(IdProducto, Lote, FechaVen)
+                If existeTransaccion Then
+                    Throw New Exception("No se puede modificar el producto tiene transacciones relacionadas")
+                End If
+            End If
+            Dim existe As Boolean = _fnExisteProducto(grproducto.GetValue("yfnumi"))
             If ((pos >= 0) And (Not existe)) Then
                 CType(grdetalle.DataSource, DataTable).Rows(pos).Item("iccprod") = grproducto.GetValue("yfnumi")
                 CType(grdetalle.DataSource, DataTable).Rows(pos).Item("producto") = grproducto.GetValue("yfcdprod1")
@@ -940,21 +945,17 @@ Public Class F0_Movimiento
                 CType(grdetalle.DataSource, DataTable).Rows(pos).Item("Presentacion") = grproducto.GetValue("Presentacion")
                 CType(grdetalle.DataSource, DataTable).Rows(pos).Item("yfcprod") = grproducto.GetValue("yfcprod")
                 CType(grdetalle.DataSource, DataTable).Rows(pos).Item("iccant") = 1
-
                 ''    _DesHabilitarProductos()
-
                 _prAddDetalleVenta()
-
                 _prCargarProductos()
                 'grproducto.RemoveFilters()
                 'grproducto.Focus()
                 'grproducto.MoveTo(grproducto.FilterRow)
                 'grproducto.Col = 1
-
                 If grdetalle.RowCount > 0 Then
                     grdetalle.Select()
                     grdetalle.Col = 3
-                    grdetalle.Row = grdetalle.RowCount - 1
+                    grdetalle.Row = pos
                 End If
             Else
                 If (existe) Then
@@ -965,9 +966,10 @@ Public Class F0_Movimiento
                     grproducto.MoveTo(grproducto.FilterRow)
                     grproducto.Col = 1
                 End If
-
             End If
-        End If
+        Catch ex As Exception
+            MostrarMensajeError(ex.Message)
+        End Try
     End Sub
     Public Sub InsertarProductosConLote()
         Dim pos As Integer = -1
@@ -1479,6 +1481,22 @@ salirIf:
 
 
     End Sub
+    Private Sub MostrarMensajeError(mensaje As String)
+        ToastNotification.Show(Me,
+                               mensaje.ToUpper,
+                               My.Resources.WARNING,
+                               5000,
+                               eToastGlowColor.Red,
+                               eToastPosition.TopCenter)
 
+    End Sub
+    Private Sub MostrarMensajeOk(mensaje As String)
+        ToastNotification.Show(Me,
+                               mensaje.ToUpper,
+                               My.Resources.OK,
+                               5000,
+                               eToastGlowColor.Green,
+                               eToastPosition.TopCenter)
+    End Sub
 #End Region
 End Class

@@ -1540,6 +1540,16 @@ Public Class AccesoLogica
 
         Return _resultado
     End Function
+    Public Shared Function L_fnMostrarLotesProducto(IdProducto As Integer, IdAlmacen As Integer) As DataTable
+        Dim _Tabla As DataTable
+        Dim _listParam As New List(Of Datos.DParametro)
+        _listParam.Add(New Datos.DParametro("@tipo", 18))
+        _listParam.Add(New Datos.DParametro("@producto", IdProducto))
+        _listParam.Add(New Datos.DParametro("@almacen", IdAlmacen))
+        _listParam.Add(New Datos.DParametro("@tauact", L_Usuario))
+        _Tabla = D_ProcedimientoConParam("sp_Mam_TV001", _listParam)
+        Return _Tabla
+    End Function
 
 #End Region
 

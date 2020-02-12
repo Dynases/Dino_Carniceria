@@ -775,12 +775,12 @@ Public Class F0_Venta2
             .Visible = False
         End With
         With grProductos.RootTable.Columns("yfcbarra")
-            .Width = 70
+            .Width = 120
             .Caption = "Cod. Barra"
             .Visible = gb_CodigoBarra
         End With
         With grProductos.RootTable.Columns("yfcdprod1")
-            .Width = 150
+            .Width = 300
             .Visible = True
             .Caption = "Descripción"
         End With
@@ -874,13 +874,13 @@ Public Class F0_Venta2
             .Visible = False
         End With
         With grProductos.RootTable.Columns("UnidMin")
-            .Width = 50
+            .Width = 120
             .CellStyle.TextAlignment = Janus.Windows.GridEX.TextAlignment.Near
             .Visible = True
             .Caption = "UN"
         End With
         With grProductos.RootTable.Columns("yhprecio")
-            .Width = 70
+            .Width = 130
             .CellStyle.TextAlignment = Janus.Windows.GridEX.TextAlignment.Near
             .Visible = True
             .Caption = "Precio"
@@ -894,7 +894,7 @@ Public Class F0_Venta2
             .FormatString = "0.00"
         End With
         With grProductos.RootTable.Columns("stock")
-            .Width = 80
+            .Width = 130
             .FormatString = "0.000"
             .Visible = True
             .Caption = "Stock"
@@ -2119,7 +2119,7 @@ Public Class F0_Venta2
     Private Sub grdetalle_EditingCell(sender As Object, e As EditingCellEventArgs) Handles grdetalle.EditingCell
         If (_fnAccesible()) Then
             'Habilitar solo las columnas de Precio, %, Monto y Observación
-            'If (e.Column.Index = grdetalle.RootTable.Columns("yfcbarra").Index Or
+
             If (e.Column.Index = grdetalle.RootTable.Columns("yfcbarra").Index Or
                 e.Column.Index = grdetalle.RootTable.Columns("tbcmin").Index Or
                 e.Column.Index = grdetalle.RootTable.Columns("tbporc").Index Or
@@ -2178,8 +2178,8 @@ Public Class F0_Venta2
                                         Return
                                     End If
                                     totalEntero = Mid(codigoBarrasCompleto, 7, 4)
-                                    totalDecimal = Mid(codigoBarrasCompleto, 11, 2)
-                                    total2 = CDbl(totalEntero).ToString() + "." + CDbl(totalDecimal).ToString()
+                                    Dim decimalLiteral = Mid(codigoBarrasCompleto, 11, 2).ToString
+                                    total2 = CDbl(totalEntero).ToString() + "." + decimalLiteral
                                     total = CDbl(total2)
                                     If (Not verificarExistenciaUnica(codigoBarrasProducto)) Then
                                         ponerProducto2(codigoBarrasProducto, total, -1)
@@ -2355,43 +2355,67 @@ salirIf:
             grdetalle.DataChanged = True
             CType(grdetalle.DataSource, DataTable).AcceptChanges()
             Dim fila As DataRow() = Table_Producto.Select("yfcbarra='" + codigo.Trim + "'", "")
+            Dim Lote As String = ""
+            Dim Fecha As String = ""
+            Dim cantidad2 As Decimal = 0
+            Dim idProducto As Integer = fila(0).ItemArray(0)
+            Dim tTabla = L_fnMostrarLotesProducto(idProducto, cbSucursal.Value)
+            If tTabla.Rows.Count < 0 Then
+                Throw New Exception("No se encontro stock para el producto seleccionado")
+            End If
             If (fila.Count > 0) Then
                 If pos = -1 Then
                     _fnObtenerFilaDetalle(pos, grdetalle.GetValue("tbnumi"))
                 End If
                 Dim cantidad = total / CDbl(fila(0).ItemArray(15))
                 Dim precio = fila(0).ItemArray(15)
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbty5prod") = fila(0).ItemArray(0)
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("codigo") = fila(0).ItemArray(1)
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("yfcbarra") = fila(0).ItemArray(2)
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("producto") = fila(0).ItemArray(3)
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbumin") = fila(0).ItemArray(13)
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("unidad") = fila(0).ItemArray(14)
-                'tbcmin
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpbas") = precio
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbptot") = total
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbtotdesc") = total
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbcmin") = cantidad
-                If (gb_FacturaIncluirICE) Then
-                    CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpcos") = fila(0).ItemArray(17)
-                Else
-                    CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpcos") = 0
+                For Each rLoteProducto As DataRow In tTabla.Rows
+                    If rLoteProducto.Item("iccven") >= cantidad Then
+                        Lote = rLoteProducto.Item("iclot")
+                        Fecha = rLoteProducto.Item("icfven")
+                        Exit For
+                    End If
+                    cantidad2 = cantidad + rLoteProducto.Item("iccven")
+                Next
+                If Lote = "" Then
+                    Throw New Exception("No se encontro un lote con la cantidad introducida")
                 End If
-                ''Modif
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpcos") = fila(0).ItemArray(16)
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbptot2") = fila(0).ItemArray(16)
-                '
-                CType(grdetalle.DataSource, DataTable).Rows(pos).Item("stock") = fila(0).ItemArray(17) - cantidad
-                'CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tblote") = grProductos.GetValue("iclot")
-                'CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbfechaVenc") = grProductos.GetValue("icfven")
-                'CType(grdetalle.DataSource, DataTable).Rows(pos).Item("stock") = grProductos.GetValue("iccven")
-                _prCalcularPrecioTotal()
+                _prInsertarProducto(total, pos, fila, cantidad, precio, Lote, Fecha)
             End If
         Catch ex As Exception
-            Throw New Exception
+            MostrarMensajeError(ex.Message)
         End Try
 
     End Sub
+
+    Private Sub _prInsertarProducto(total As Decimal, pos As Integer, fila() As DataRow, cantidad As Double, precio As Object, lote As String, fechaVen As String)
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbty5prod") = fila(0).ItemArray(0)
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("codigo") = fila(0).ItemArray(1)
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("yfcbarra") = fila(0).ItemArray(2)
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("producto") = fila(0).ItemArray(3)
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbumin") = fila(0).ItemArray(13)
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("unidad") = fila(0).ItemArray(14)
+        'tbcmin
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpbas") = precio
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbptot") = total
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbtotdesc") = total
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbcmin") = cantidad
+        If (gb_FacturaIncluirICE) Then
+            CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpcos") = fila(0).ItemArray(17)
+        Else
+            CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpcos") = 0
+        End If
+        ''Modif
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbpcos") = fila(0).ItemArray(16)
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbptot2") = fila(0).ItemArray(16)
+        '
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("stock") = fila(0).ItemArray(17) - cantidad
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tblote") = lote
+        CType(grdetalle.DataSource, DataTable).Rows(pos).Item("tbfechaVenc") = fechaVen
+        'CType(grdetalle.DataSource, DataTable).Rows(pos).Item("stock") = grProductos.GetValue("iccven")
+        _prCalcularPrecioTotal()
+    End Sub
+
     Private Sub sumarCantidad(codigo As String)
         Dim fila As DataRow() = CType(grdetalle.DataSource, DataTable).Select("yfcbarra='" + codigo.Trim + "'", "")
         If (fila.Count > 0) Then
